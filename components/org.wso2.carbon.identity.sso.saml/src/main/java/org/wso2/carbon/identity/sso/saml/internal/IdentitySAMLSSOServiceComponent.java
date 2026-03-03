@@ -43,6 +43,7 @@ import org.wso2.carbon.identity.sso.saml.SAML2InboundAuthConfigHandler;
 import org.wso2.carbon.identity.sso.saml.SAMLInboundSessionContextMgtListener;
 import org.wso2.carbon.identity.sso.saml.SAMLLogoutHandler;
 import org.wso2.carbon.identity.sso.saml.SAMLSSOConfigServiceImpl;
+import org.wso2.carbon.identity.sso.saml.SAMLSSOConstants;
 import org.wso2.carbon.identity.sso.saml.SSOServiceProviderConfigManager;
 import org.wso2.carbon.identity.sso.saml.admin.FileBasedConfigManager;
 import org.wso2.carbon.identity.sso.saml.extension.SAMLExtensionProcessor;
