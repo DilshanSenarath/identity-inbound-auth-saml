@@ -169,8 +169,10 @@ public class IdentitySAMLSSOServiceComponent {
                     log.debug(" SAML SSO response JSP page is found at : " + redirectJspFilePath);
                 }
             } else {
+                String htmlPageToUse = useIntermediateLoaderPage() ? "samlsso_response_loader.html" :
+                        "samlsso_response.html";
                 redirectHtmlPath = Paths.get(CarbonUtils.getCarbonHome(), "repository", "resources",
-                        "identity", "pages", "samlsso_response.html");
+                        "identity", "pages", htmlPageToUse);
                 if (Files.exists(redirectHtmlPath)) {
                     useSamlSsoResponseHtmlPage = true;
                     ssoRedirectPage = new String(Files.readAllBytes(redirectHtmlPath), StandardCharsets.UTF_8);
@@ -462,5 +464,20 @@ public class IdentitySAMLSSOServiceComponent {
             log.debug("Unsetting the configuration manager in SAML SSO service bundle.");
         }
         IdentitySAMLSSOServiceComponentHolder.getInstance().setConfigurationManager(null);
+    }
+
+    /**
+     * If this configuration is set to true, SAML Response will be sent using an intermediate page that
+     * only contains a loader icon as the visual component
+     * (Ref: repository/resources/identity/pages/samlsso_response_loader.html).
+     * Otherwise, SAML Response will be sent using the existing SAML SSO response page which contains
+     * additional text components (Ref: repository/resources/identity/pages/samlsso_response.html).
+     *
+     * @return true if the configuration is set to true, false otherwise.
+     */
+    private boolean useIntermediateLoaderPage() {
+
+        return Boolean.parseBoolean(
+                IdentityUtil.getProperty(SAMLSSOConstants.USE_INTERMEDIATE_LOADER_PAGE_CONFIG_NAME));
     }
 }

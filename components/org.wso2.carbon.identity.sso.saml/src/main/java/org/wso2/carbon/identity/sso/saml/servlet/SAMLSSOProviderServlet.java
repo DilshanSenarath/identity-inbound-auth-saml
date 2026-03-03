@@ -1121,7 +1121,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
         out.print(finalPage);
 
         if (log.isDebugEnabled()) {
-            log.debug("samlsso_response.html " + finalPage);
+            log.debug("samlsso intermediate response page " + finalPage);
         }
     }
 
