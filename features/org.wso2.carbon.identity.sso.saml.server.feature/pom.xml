@@ -22,7 +22,7 @@
         <groupId>org.wso2.carbon.identity.inbound.auth.saml2</groupId>
         <artifactId>identity-inbound-auth-saml</artifactId>
         <relativePath>../../pom.xml</relativePath>
-        <version>5.11.63</version>
+        <version>5.12.4-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
@@ -45,7 +45,7 @@
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.org.opensaml</groupId>
-            <artifactId>opensaml</artifactId>
+            <artifactId>opensaml-jdk21</artifactId>
         </dependency>
         <dependency>
             <groupId>org.wso2.orbit.joda-time</groupId>
@@ -74,6 +74,7 @@
                                         <include>p2.inf</include>
                                         <include>saml2.federation.properties</include>
                                         <include>samlsso_response.html</include>
+                                        <include>samlsso_response_loader.html</include>
                                         <include>sso-idp-config.xml</include>
                                     </includes>
                                 </resource>
@@ -105,7 +106,7 @@
                             <bundles>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.saml2:org.wso2.carbon.identity.sso.saml</bundleDef>
                                 <bundleDef>org.wso2.carbon.identity.inbound.auth.saml2:org.wso2.carbon.identity.sso.saml.common</bundleDef>
-                                <bundleDef>org.wso2.orbit.org.opensaml:opensaml</bundleDef>
+                                <bundleDef>org.wso2.orbit.org.opensaml:opensaml-jdk21</bundleDef>
                                 <bundleDef>org.wso2.orbit.joda-time:joda-time</bundleDef>
                                 <bundleDef>org.wso2.orbit.jsr105:jsr105</bundleDef>
                                 <bundleDef>org.apache.santuario:xmlsec</bundleDef>
@@ -116,7 +117,7 @@
                                 <importFeatureDef>org.wso2.carbon.identity.core.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.identity.application.authentication.framework.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
                                 <importFeatureDef>org.wso2.carbon.idp.mgt.server:greaterOrEqual:${carbon.identity.framework.version}</importFeatureDef>
-                                <importFeatureDef>org.wso2.carbon.identity.saml.common.util:${saml.common.util.version}</importFeatureDef>
+                                <importFeatureDef>org.wso2.carbon.identity.saml.common.util:compatible:${saml.common.util.version}</importFeatureDef>
                             </importFeatures>
                         </configuration>
                     </execution>

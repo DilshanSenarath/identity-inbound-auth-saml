@@ -20,6 +20,7 @@
 <suite name="identity-sso-saml-test-suite">
     <test name="identity-sso-saml-test-all">
         <classes>
+            <class name="org.wso2.carbon.identity.sso.saml.servlet.SAMLSSOProviderServletTest" />
             <class name="org.wso2.carbon.identity.sso.saml.servlet.SAMLSSOProviderServletSendPostRequestTest" />
             <class name="org.wso2.carbon.identity.sso.saml.SAML2InboundAuthConfigHandlerTest"/>
             <class name="org.wso2.carbon.identity.sso.saml.util.AssertionBuildingTest" />
@@ -36,6 +37,8 @@
             <class name="org.wso2.carbon.identity.sso.saml.SAMLLogoutHandlerTest"/>
             <class name="org.wso2.carbon.identity.sso.saml.extension.eidas.EidasExtensionProcessorTest" />
             <class name="org.wso2.carbon.identity.sso.saml.util.SAMLSOAPUtils"/>
+            <class name="org.wso2.carbon.identity.sso.saml.processors.SPInitLogoutRequestProcessorTest"/>
+            <class name="org.wso2.carbon.identity.sso.saml.internal.IdentitySAMLSSOServiceComponentTest"/>
         </classes>
     </test>
 </suite>

@@ -19,7 +19,6 @@ package org.wso2.carbon.identity.sso.saml.internal;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.eclipse.equinox.http.helper.ContextPathServletAdaptor;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
@@ -28,7 +27,6 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.http.HttpService;
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.identity.application.authentication.framework.ApplicationAuthenticationService;
 import org.wso2.carbon.identity.application.authentication.framework.listener.SessionContextMgtListener;
@@ -52,8 +50,6 @@ import org.wso2.carbon.identity.sso.saml.SSOServiceProviderConfigManager;
 import org.wso2.carbon.identity.sso.saml.admin.FileBasedConfigManager;
 import org.wso2.carbon.identity.sso.saml.extension.SAMLExtensionProcessor;
 import org.wso2.carbon.identity.sso.saml.extension.eidas.EidasExtensionProcessor;
-import org.wso2.carbon.identity.sso.saml.servlet.SAMLArtifactResolveServlet;
-import org.wso2.carbon.identity.sso.saml.servlet.SAMLSSOProviderServlet;
 import org.wso2.carbon.identity.sso.saml.util.SAMLSSOUtil;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -111,26 +107,6 @@ public class IdentitySAMLSSOServiceComponent {
     protected void activate(ComponentContext ctxt) {
 
         SAMLSSOUtil.setBundleContext(ctxt.getBundleContext());
-        HttpService httpService = SAMLSSOUtil.getHttpService();
-        // Register SAML SSO servlet
-        Servlet samlSSOServlet = new ContextPathServletAdaptor(new SAMLSSOProviderServlet(),
-                SAMLSSOConstants.SAMLSSO_URL);
-        try {
-            httpService.registerServlet(SAMLSSOConstants.SAMLSSO_URL, samlSSOServlet, null, null);
-        } catch (Exception e) {
-            String errMsg = "Error when registering SAML SSO Servlet via the HttpService.";
-            log.error(errMsg, e);
-            throw new RuntimeException(errMsg, e);
-        }
-        // Register SAML artifact resolve servlet
-        Servlet samlArtifactResolveServlet = new ContextPathServletAdaptor(new SAMLArtifactResolveServlet(),
-                SAMLSSOConstants.SAML_ARTIFACT_RESOLVE_URL);
-        try {
-            httpService.registerServlet(SAMLSSOConstants.SAML_ARTIFACT_RESOLVE_URL, samlArtifactResolveServlet,
-                    null, null);
-        } catch (Exception e) {
-            throw new RuntimeException("Error when registering SAML Artifact Resolve Servlet via the HttpService.", e);
-        }
 
         // Register a SSOServiceProviderConfigManager object as an OSGi Service
         ctxt.getBundleContext().registerService(SSOServiceProviderConfigManager.class.getName(),
@@ -196,8 +172,10 @@ public class IdentitySAMLSSOServiceComponent {
                     log.debug(" SAML SSO response JSP page is found at : " + redirectJspFilePath);
                 }
             } else {
+                String htmlPageToUse = useIntermediateLoaderPage() ? "samlsso_response_loader.html" :
+                        "samlsso_response.html";
                 redirectHtmlPath = Paths.get(CarbonUtils.getCarbonHome(), "repository", "resources",
-                        "identity", "pages", "samlsso_response.html");
+                        "identity", "pages", htmlPageToUse);
                 if (Files.exists(redirectHtmlPath)) {
                     useSamlSsoResponseHtmlPage = true;
                     ssoRedirectPage = new String(Files.readAllBytes(redirectHtmlPath), StandardCharsets.UTF_8);
@@ -389,28 +367,6 @@ public class IdentitySAMLSSOServiceComponent {
         SAMLSSOUtil.setConfigCtxService(null);
     }
 
-    @Reference(
-            name = "osgi.httpservice",
-            service = org.osgi.service.http.HttpService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetHttpService")
-    protected void setHttpService(HttpService httpService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP Service is set in the SAML SSO bundle");
-        }
-        SAMLSSOUtil.setHttpService(httpService);
-    }
-
-    protected void unsetHttpService(HttpService httpService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("HTTP Service is unset in the SAML SSO bundle");
-        }
-        SAMLSSOUtil.setHttpService(null);
-    }
-
     public static ServerConfigurationService getServerConfigurationService() {
 
         return IdentitySAMLSSOServiceComponent.serverConfigurationService;
@@ -544,5 +500,20 @@ public class IdentitySAMLSSOServiceComponent {
             log.debug("Unsetting the configuration manager in SAML SSO service bundle.");
         }
         IdentitySAMLSSOServiceComponentHolder.getInstance().setConfigurationManager(null);
+    }
+
+    /**
+     * If this configuration is set to true, SAML Response will be sent using an intermediate page that
+     * only contains a loader icon as the visual component
+     * (Ref: repository/resources/identity/pages/samlsso_response_loader.html).
+     * Otherwise, SAML Response will be sent using the existing SAML SSO response page which contains
+     * additional text components (Ref: repository/resources/identity/pages/samlsso_response.html).
+     *
+     * @return true if the configuration is set to true, false otherwise.
+     */
+    private boolean useIntermediateLoaderPage() {
+
+        return Boolean.parseBoolean(
+                IdentityUtil.getProperty(SAMLSSOConstants.USE_INTERMEDIATE_LOADER_PAGE_CONFIG_NAME));
     }
 }

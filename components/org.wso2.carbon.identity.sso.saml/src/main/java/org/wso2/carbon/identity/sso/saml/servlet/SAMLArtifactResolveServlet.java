@@ -31,7 +31,9 @@ import org.opensaml.soap.common.SOAPObjectBuilder;
 import org.opensaml.soap.soap11.Body;
 import org.opensaml.soap.soap11.Envelope;
 import org.opensaml.core.xml.XMLObjectBuilderFactory;
+import org.osgi.service.component.annotations.Component;
 import org.wso2.carbon.identity.application.authentication.framework.util.FrameworkUtils;
+import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 import org.wso2.carbon.identity.sso.saml.SAMLSSOArtifactResolver;
@@ -49,6 +51,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -68,6 +71,15 @@ import javax.xml.transform.stream.StreamResult;
  * This is the SAML2 artifact resolve end point for authentication process in an SSO scenario.
  * This servlet is registered with the URL pattern /samlartresolve.
  */
+@Component(
+        service = Servlet.class,
+        immediate = true,
+        property = {
+                "osgi.http.whiteboard.servlet.pattern=" + SAMLSSOConstants.SAML_ARTIFACT_RESOLVE_URL,
+                "osgi.http.whiteboard.servlet.name=SAMLArtifactResolveServlet",
+                "osgi.http.whiteboard.servlet.asyncSupported=true"
+        }
+)
 public class SAMLArtifactResolveServlet extends HttpServlet {
 
     private static final long serialVersionUID = -2505199341482721905L;
@@ -161,8 +173,12 @@ public class SAMLArtifactResolveServlet extends HttpServlet {
 
         String id = URLDecoder.decode(artifactResolve.getID(), StandardCharsets.UTF_8.name());
         DateTime issueInstant = artifactResolve.getIssueInstant();
-        String samlArt = URLDecoder.decode(artifactResolve.getArtifact().getArtifact(),
-                StandardCharsets.UTF_8.name());
+        String samlArt;
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(IdentityConstants.ServerConfig.SAML2_ARTIFACT_DOUBLE_ENCODING_DISABLED))) {
+            samlArt = artifactResolve.getArtifact().getArtifact();
+        } else {
+            samlArt= URLDecoder.decode(artifactResolve.getArtifact().getArtifact(), StandardCharsets.UTF_8.name());
+        }
         String issuer = artifactResolve.getIssuer().getValue();
         artifactResolve.getArtifact().setArtifact(samlArt);
 

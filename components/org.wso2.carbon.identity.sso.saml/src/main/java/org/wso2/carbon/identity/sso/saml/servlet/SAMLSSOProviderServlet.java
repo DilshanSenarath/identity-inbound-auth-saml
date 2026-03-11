@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.opensaml.saml.saml2.core.LogoutRequest;
 import org.opensaml.saml.saml2.core.LogoutResponse;
 import org.opensaml.core.xml.XMLObject;
+import org.osgi.service.component.annotations.Component;
 import org.owasp.encoder.Encode;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.core.SameSiteCookie;
@@ -109,6 +110,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.servlet.RequestDispatcher;
+import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -140,6 +142,15 @@ import static org.wso2.carbon.identity.sso.saml.SAMLSSOConstants.LogConstants.SA
  * SAML Assertion. If not, he will be prompted again for credentials.</li>
  * </ol>
  */
+@Component(
+        service = Servlet.class,
+        immediate = true,
+        property = {
+                "osgi.http.whiteboard.servlet.pattern=" + SAMLSSOConstants.SAMLSSO_URL,
+                "osgi.http.whiteboard.servlet.name=SAMLSSOProviderServlet",
+                "osgi.http.whiteboard.servlet.asyncSupported=true"
+        }
+)
 public class SAMLSSOProviderServlet extends HttpServlet {
 
     private static final long serialVersionUID = -5182312441482721905L;
@@ -892,7 +903,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
         String sessionDataKey = UUID.randomUUID().toString();
         addSessionDataToCache(sessionDataKey, sessionDTO);
 
-        String selfPath = ServiceURLBuilder.create().addPath(req.getContextPath()).build().getRelativeInternalURL();
+        String selfPath = ServiceURLBuilder.create().addPath(req.getRequestURI()).build().getRelativeInternalURL();
         // Setting authentication request context
         AuthenticationRequest authenticationRequest = new AuthenticationRequest();
 
@@ -977,7 +988,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
         String sessionDataKey = UUID.randomUUID().toString();
         addSessionDataToCache(sessionDataKey, sessionDTO);
 
-        String selfPath = ServiceURLBuilder.create().addPath(request.getContextPath()).build().getRelativeInternalURL();
+        String selfPath = ServiceURLBuilder.create().addPath(request.getRequestURI()).build().getRelativeInternalURL();
 
         //Add all parameters to authentication context before sending to authentication
         // framework
@@ -1025,8 +1036,12 @@ public class SAMLSSOProviderServlet extends HttpServlet {
 
         Map<String, String> queryParams = new HashMap<>();
 
-        String encodedArtifact = URLEncoder.encode(artifact, StandardCharsets.UTF_8.name());
-        queryParams.put(SAMLSSOConstants.SAML_ART, encodedArtifact);
+        if (Boolean.parseBoolean(IdentityUtil.getProperty(IdentityConstants.ServerConfig.SAML2_ARTIFACT_DOUBLE_ENCODING_DISABLED))) {
+            queryParams.put(SAMLSSOConstants.SAML_ART, artifact);
+        } else {
+            String encodedArtifact = URLEncoder.encode(artifact, StandardCharsets.UTF_8.name());
+            queryParams.put(SAMLSSOConstants.SAML_ART, encodedArtifact);
+        }
 
         if (relayState != null) {
             String encodedRelayState = URLEncoder.encode(relayState, StandardCharsets.UTF_8.name());
@@ -1115,7 +1130,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
         out.print(finalPage);
 
         if (log.isDebugEnabled()) {
-            log.debug("samlsso_response.html " + finalPage);
+            log.debug("samlsso intermediate response page " + finalPage);
         }
     }
 
