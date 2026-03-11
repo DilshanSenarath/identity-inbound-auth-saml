@@ -926,8 +926,6 @@ public class SAMLSSOProviderServlet extends HttpServlet {
         authenticationRequest.setPassiveAuth(signInRespDTO.isPassive());
         authenticationRequest.setTenantDomain(sessionDTO.getTenantDomain());
         authenticationRequest.setPost(isPost);
-        authenticationRequest.setAccessingOrgId(PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                .getApplicationResidentOrganizationId());
 
         // Creating cache entry and adding entry to the cache before calling to commonauth
         AuthenticationRequestCacheEntry authRequest = new AuthenticationRequestCacheEntry
@@ -2022,7 +2020,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
             }
             String spName;
             String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                    .getApplicationResidentOrganizationId();
+                    .getAccessingOrganizationId();
             if (accessingOrgId != null) {
                 spName = getSpNameFromOrgHierarchy(issuer, accessingOrgId);
             } else {

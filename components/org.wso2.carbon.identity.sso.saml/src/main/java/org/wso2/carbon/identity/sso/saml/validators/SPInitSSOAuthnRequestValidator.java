@@ -129,7 +129,7 @@ public class SPInitSSOAuthnRequestValidator extends SSOAuthnRequestAbstractValid
             // Try to resolve SP config from the organization hierarchy if accessing org id is present,
             // otherwise fall back to tenant-based lookup.
             String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
-                    .getApplicationResidentOrganizationId();
+                    .getAccessingOrganizationId();
             SAMLSSOServiceProviderDO serviceProviderConfigs;
             if (accessingOrgId != null) {
                 serviceProviderConfigs = resolveServiceProviderConfigFromOrgHierarchy(issuerName, accessingOrgId);
