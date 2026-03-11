@@ -55,6 +55,9 @@ import org.wso2.carbon.identity.core.model.IdentityCookieConfig;
 import org.wso2.carbon.identity.core.model.SAMLSSOServiceProviderDO;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.organization.management.service.exception.OrganizationManagementException;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.exception.OrgResourceHierarchyTraverseException;
+import org.wso2.carbon.identity.organization.resource.hierarchy.traverse.service.strategy.FirstFoundAggregationStrategy;
 import org.wso2.carbon.identity.sso.saml.FrontChannelSLOParticipantInfo;
 import org.wso2.carbon.identity.sso.saml.FrontChannelSLOParticipantStore;
 import org.wso2.carbon.identity.sso.saml.SAMLECPConstants;
@@ -82,6 +85,7 @@ import org.wso2.carbon.identity.sso.saml.internal.IdentitySAMLSSOServiceComponen
 import org.wso2.carbon.identity.sso.saml.internal.IdentitySAMLSSOServiceComponentHolder;
 import org.wso2.carbon.identity.sso.saml.session.SSOSessionPersistenceManager;
 import org.wso2.carbon.identity.sso.saml.session.SessionInfoData;
+import org.wso2.carbon.identity.sso.saml.util.LambdaExceptionUtils;
 import org.wso2.carbon.identity.sso.saml.util.SAMLSOAPUtils;
 import org.wso2.carbon.identity.sso.saml.util.SAMLSSOUtil;
 import org.wso2.carbon.idp.mgt.util.IdPManagementUtil;
@@ -101,6 +105,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -182,6 +187,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
             handleRequest(httpServletRequest, httpServletResponse, false);
         } finally {
             SAMLSSOUtil.removeSaaSApplicationThreaLocal();
+            SAMLSSOUtil.removeOrganizationLoginThreadLocal();
             SAMLSSOUtil.removeUserTenantDomainThreaLocal();
             SAMLSSOUtil.removeTenantDomainFromThreadLocal();
             SAMLSSOUtil.removeIssuerWithQualifierInThreadLocal();
@@ -195,6 +201,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
             handleRequest(req, resp, true);
         } finally {
             SAMLSSOUtil.removeSaaSApplicationThreaLocal();
+            SAMLSSOUtil.removeOrganizationLoginThreadLocal();
             SAMLSSOUtil.removeUserTenantDomainThreaLocal();
             SAMLSSOUtil.removeTenantDomainFromThreadLocal();
             SAMLSSOUtil.removeIssuerWithQualifierInThreadLocal();
@@ -1999,6 +2006,7 @@ public class SAMLSSOProviderServlet extends HttpServlet {
                 authResult.getProperty(FrameworkConstants.AnalyticsAttributes.SESSION_ID));
 
         SAMLSSOUtil.setIsSaaSApplication(authResult.isSaaSApp());
+        SAMLSSOUtil.setIsSharedAppLogin(authResult.isSharedAppLogin());
         SAMLSSOUtil.setUserTenantDomain(authResult.getSubject().getTenantDomain());
     }
 
@@ -2010,15 +2018,59 @@ public class SAMLSSOProviderServlet extends HttpServlet {
                 // the service provider name from the issuer.
                 return;
             }
-            String spName = ApplicationManagementService.getInstance()
-                    .getServiceProviderNameByClientId(SAMLSSOUtil.splitAppendedTenantDomain(issuer),
-                            IdentityApplicationConstants.Authenticator.SAML2SSO.NAME, tenantDomain);
+            String spName;
+            String accessingOrgId = PrivilegedCarbonContext.getThreadLocalCarbonContext()
+                    .getAccessingOrganizationId();
+            if (accessingOrgId != null) {
+                spName = getSpNameFromOrgHierarchy(issuer, accessingOrgId);
+            } else {
+                spName = ApplicationManagementService.getInstance()
+                        .getServiceProviderNameByClientId(SAMLSSOUtil.splitAppendedTenantDomain(issuer),
+                                IdentityApplicationConstants.Authenticator.SAML2SSO.NAME, tenantDomain);
+            }
             req.setAttribute(REQUEST_PARAM_SP, spName);
             req.setAttribute(TENANT_DOMAIN, tenantDomain);
         } catch (IdentityApplicationManagementException e) {
             log.error("Error while getting Service provider name for issuer:" + issuer + " in tenant: " +
                     tenantDomain, e);
         }
+    }
+
+    private String getSpNameFromOrgHierarchy(String clientId, String accessingOrgId) {
+
+        try {
+            return IdentitySAMLSSOServiceComponentHolder.getInstance().getOrgResourceResolverService()
+                    .getResourcesFromOrgHierarchy(accessingOrgId,
+                            LambdaExceptionUtils.rethrowFunction(
+                                    orgId -> getSpNameByClientId(clientId, orgId)),
+                            new FirstFoundAggregationStrategy<>());
+        } catch (OrgResourceHierarchyTraverseException e) {
+            log.error("Error while traversing organization hierarchy for organization id: " + accessingOrgId, e);
+        }
+        return null;
+    }
+
+    private Optional<String> getSpNameByClientId(String clientId, String organizationId) {
+
+        String tenantDomain;
+        try {
+            tenantDomain = IdentitySAMLSSOServiceComponentHolder.getInstance().getOrganizationManager()
+                    .resolveTenantDomain(organizationId);
+        } catch (OrganizationManagementException e) {
+            log.error("Error while resolving tenant domain from organization id: " + organizationId, e);
+            return Optional.empty();
+        }
+
+        try {
+            String spName = ApplicationManagementService.getInstance()
+                    .getServiceProviderNameByClientId(SAMLSSOUtil.splitAppendedTenantDomain(clientId),
+                            IdentityApplicationConstants.Authenticator.SAML2SSO.NAME, tenantDomain);
+            return Optional.ofNullable(spName);
+        } catch (IdentityApplicationManagementException e) {
+            log.error("Error while getting Service provider name for clientId:" + clientId + " in tenant: " +
+                    tenantDomain, e);
+        }
+        return Optional.empty();
     }
 
     private void doFrontChannelSLO(HttpServletRequest request, HttpServletResponse response,

@@ -164,6 +164,7 @@ public class SAMLSSOUtil {
     private static final Set<Character> UNRESERVED_CHARACTERS = new HashSet<>();
     private static final ThreadLocal<Boolean> isSaaSApplication = new ThreadLocal<>();
     private static final ThreadLocal<String> userTenantDomainThreadLocal = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> isSharedAppLogin = new ThreadLocal<>();
     private static final String DefaultAssertionBuilder = "org.wso2.carbon.identity.sso.saml.builders.assertion.DefaultSAMLAssertionBuilder";
 
     static {
@@ -224,6 +225,15 @@ public class SAMLSSOUtil {
         return false;
     }
 
+    public static boolean isSharedAppLogin() {
+
+        Boolean value = isSharedAppLogin.get();
+        if (value != null) {
+            return value;
+        }
+        return false;
+    }
+
     /**
      * Check whether certificate expiration enabled
      * @return
@@ -273,6 +283,16 @@ public class SAMLSSOUtil {
 
     public static void removeSaaSApplicationThreaLocal() {
         isSaaSApplication.remove();
+    }
+
+    public static void setIsSharedAppLogin(boolean sharedAppLogin) {
+
+        isSharedAppLogin.set(sharedAppLogin);
+    }
+
+    public static void removeOrganizationLoginThreadLocal() {
+
+        isSharedAppLogin.remove();
     }
 
     public static String getUserTenantDomain() {
