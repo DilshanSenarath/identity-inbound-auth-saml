@@ -61,6 +61,13 @@ public class DBUtil {
                 ResultSet rs = metaData.getColumns(null, null, SAML2_ASSERTION_STORE, ASSERTION);
                 if (rs.next()) {
                     isAssertionDTOPersistenceSupported = true;
+                } else {
+                    // Some DBs stores unquoted identifiers in lowercase, so retry with lowercase names.
+                    rs = metaData.getColumns(null, null,
+                            SAML2_ASSERTION_STORE.toLowerCase(), ASSERTION.toLowerCase());
+                    if (rs.next()) {
+                        isAssertionDTOPersistenceSupported = true;
+                    }
                 }
             } catch (SQLException e) {
                 log.error("Error in fetching metadata from IDN_SAML2_ASSERTION_STORE database", e);
