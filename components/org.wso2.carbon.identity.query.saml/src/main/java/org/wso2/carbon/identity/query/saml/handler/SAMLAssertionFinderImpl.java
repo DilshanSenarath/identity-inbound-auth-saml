@@ -283,15 +283,11 @@ public class SAMLAssertionFinderImpl implements SAMLAssertionFinder {
     private List<Assertion> extractAssertions(ResultSet resultSet) throws SQLException, IOException,
             ClassNotFoundException, IdentitySAML2QueryException {
 
-        boolean isAssertionDTOPersistenceSupported = DBUtil.isAssertionDTOPersistenceSupported();
         List<Assertion> assertions = new ArrayList<>();
         while (resultSet.next()) {
-            String assertionString = null;
-            if (isAssertionDTOPersistenceSupported) {
-                assertionString = (String) DBUtil.getBlobObject(resultSet.getBinaryStream(2));
-            }
+            String assertionString = (String) DBUtil.getBlobObject(resultSet.getBinaryStream("ASSERTION"));
             if (StringUtils.isBlank(assertionString)) {
-                assertionString = resultSet.getString(1);
+                assertionString = resultSet.getString("SAML2_ASSERTION");
             }
             assertions.add((Assertion) SAMLQueryRequestUtil.unmarshall(assertionString));
         }
