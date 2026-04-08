@@ -20,7 +20,9 @@ package org.wso2.carbon.identity.sso.saml.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.wso2.carbon.database.utils.jdbc.exceptions.DataAccessException;
 import org.wso2.carbon.identity.core.util.IdentityDatabaseUtil;
+import org.wso2.carbon.identity.core.util.JdbcUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -58,17 +60,18 @@ public class DBUtil {
             try (Connection connection = IdentityDatabaseUtil.getDBConnection()) {
 
                 DatabaseMetaData metaData = connection.getMetaData();
-                ResultSet rs = metaData.getColumns(null, null, SAML2_ASSERTION_STORE, ASSERTION);
+                String tableName = SAML2_ASSERTION_STORE;
+                String columnName = ASSERTION;
+                if (JdbcUtils.isPostgreSQLDB()) {
+                    tableName = SAML2_ASSERTION_STORE.toLowerCase();
+                    columnName = ASSERTION.toLowerCase();
+                }
+                ResultSet rs = metaData.getColumns(null, null, tableName, columnName);
                 if (rs.next()) {
                     isAssertionDTOPersistenceSupported = true;
-                } else {
-                    // Some DBs stores unquoted identifiers in lowercase, so retry with lowercase names.
-                    rs = metaData.getColumns(null, null,
-                            SAML2_ASSERTION_STORE.toLowerCase(), ASSERTION.toLowerCase());
-                    if (rs.next()) {
-                        isAssertionDTOPersistenceSupported = true;
-                    }
                 }
+            } catch (DataAccessException e) {
+                log.error("Error occurred while checking the database type", e);
             } catch (SQLException e) {
                 log.error("Error in fetching metadata from IDN_SAML2_ASSERTION_STORE database", e);
             }
