@@ -1825,8 +1825,9 @@ public class SAMLSSOUtil {
     public static String getDefaultLogoutEndpoint() {
 
         try {
-            return resolveUrl(SAMLSSOConstants.DEFAULT_LOGOUT_ENDPOINT, IdentityUtil.getProperty(IdentityConstants.ServerConfig
-                    .DEFAULT_LOGOUT_ENDPOINT));
+            return resolveUrl(SAMLSSOConstants.DEFAULT_LOGOUT_ENDPOINT,
+                    IdentityUtil.getProperty(IdentityConstants.ServerConfig.DEFAULT_LOGOUT_ENDPOINT),
+                    IdentityUtil.getProperty(IdentityConstants.ServerConfig.DEFAULT_LOGOUT_ENDPOINT_V2));
         } catch (URLBuilderException e) {
             throw new IdentityRuntimeException("Error while resolving the default endpoint that handles SAML logout ", e);
         }
@@ -2714,6 +2715,39 @@ public class SAMLSSOUtil {
                         defaultUrlContext);
             }
             return urlFromConfig;
+        }
+
+        return ServiceURLBuilder.create().addPath(defaultUrlContext).build().getAbsolutePublicURL();
+    }
+
+    /**
+     * Resolves the public service url given the default context and the url picked from the configuration based on
+     * the 'tenant_context.enable_tenant_qualified_urls' mode set in deployment.toml and the url picked from the
+     * file configuration for tenant qualified urls.
+     *
+     * @param defaultUrlContext default url context path
+     * @param urlFromConfig     url picked from the file configuration
+     * @param urlFromConfigV2   url picked from the file configuration for tenant qualified urls
+     * @return absolute public url of the service if 'enable_tenant_qualified_urls' is 'true', else returns the url
+     * from the file config
+     * @throws URLBuilderException when fail to build the absolute public url
+     */
+    private static String resolveUrl(String defaultUrlContext, String urlFromConfig, String urlFromConfigV2)
+            throws URLBuilderException {
+
+        if (!IdentityTenantUtil.isTenantQualifiedUrlsEnabled()) {
+            if (StringUtils.isNotBlank(urlFromConfig)) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Resolved URL:" + urlFromConfig + " from file configuration for default url context: " +
+                            defaultUrlContext);
+                }
+                return urlFromConfig;
+            }
+            return ServiceURLBuilder.create().addPath(defaultUrlContext).build().getAbsolutePublicURL();
+        }
+
+        if (StringUtils.isNotBlank(urlFromConfigV2)) {
+            return urlFromConfigV2;
         }
 
         return ServiceURLBuilder.create().addPath(defaultUrlContext).build().getAbsolutePublicURL();
