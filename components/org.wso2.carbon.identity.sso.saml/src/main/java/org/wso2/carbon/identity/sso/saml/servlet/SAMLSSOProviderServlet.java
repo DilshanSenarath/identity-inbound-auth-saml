@@ -1240,10 +1240,20 @@ public class SAMLSSOProviderServlet extends HttpServlet {
                     statusCodes.add(SAMLSSOConstants.StatusCodes.AUTHN_FAILURE);
                     statusCodes.add(SAMLSSOConstants.StatusCodes.IDENTITY_PROVIDER_ERROR);
 
-                    String errorResp = SAMLSSOUtil.buildCompressedErrorResponse(authenticationRequestId, statusCodes,
-                            "User authentication failed", assertionConsumerURL);
-                    sendNotification(errorResp, SAMLSSOConstants.Notification.EXCEPTION_STATUS, SAMLSSOConstants
-                            .Notification.EXCEPTION_MESSAGE, assertionConsumerURL, req, resp);
+                    if (SAMLSSOUtil.isSendAuthFailureResponseToSPEnabled()
+                            && StringUtils.isNotBlank(assertionConsumerURL)) {
+                        String errorResp = SAMLSSOUtil.buildErrorResponse(authenticationRequestId, statusCodes,
+                                "User authentication failed", assertionConsumerURL);
+                        sendResponse(req, resp, sessionDTO.getRelayState(), errorResp, assertionConsumerURL,
+                                sessionDTO.getValidationRespDTO().getSubject(), null,
+                                sessionDTO.getTenantDomain());
+                    } else {
+                        String errorResp = SAMLSSOUtil.buildCompressedErrorResponse(authenticationRequestId,
+                                statusCodes, "User authentication failed", assertionConsumerURL);
+                        sendNotification(errorResp, SAMLSSOConstants.Notification.EXCEPTION_STATUS,
+                                SAMLSSOConstants.Notification.EXCEPTION_MESSAGE, assertionConsumerURL, req,
+                                resp);
+                    }
                     return;
                 } else {
                     throw IdentityException.error(IdentityException.class, "Could not find " + "session state " +
@@ -1288,12 +1298,34 @@ public class SAMLSSOProviderServlet extends HttpServlet {
                             authResult.getAuthenticatedIdPs(), sessionDTO.getTenantDomain());
                 }
             } else { // authentication FAILURE
-                String errorResp = authRespDTO.getRespString();
-                sendNotification(errorResp, SAMLSSOConstants.Notification.EXCEPTION_STATUS,
-                        SAMLSSOConstants.Notification.EXCEPTION_MESSAGE,
-                        authRespDTO.getAssertionConsumerURL(), req, resp);
+                if (SAMLSSOUtil.isSendAuthFailureResponseToSPEnabled()
+                        && StringUtils.isNotBlank(assertionConsumerURL)) {
+                    String errorResp = prepareErrorResponseForPostBinding(
+                            authRespDTO.getRespString());
+                    sendResponse(req, resp, relayState, errorResp, assertionConsumerURL,
+                            sessionDTO.getValidationRespDTO().getSubject(), null,
+                            sessionDTO.getTenantDomain());
+                } else {
+                    String errorResp = authRespDTO.getRespString();
+                    sendNotification(errorResp, SAMLSSOConstants.Notification.EXCEPTION_STATUS,
+                            SAMLSSOConstants.Notification.EXCEPTION_MESSAGE,
+                            authRespDTO.getAssertionConsumerURL(), req, resp);
+                }
             }
         }
+    }
+
+    /**
+     * Prepare a compressed (deflated + base64) SAML error response for POST binding
+     * by converting it to base64-only encoding (without deflation).
+     *
+     * @param compressedResponse The compressed SAML response string (deflated + base64 encoded).
+     * @return The base64 encoded SAML response suitable for POST binding.
+     * @throws IdentityException If an error occurs during decoding.
+     */
+    private String prepareErrorResponseForPostBinding(String compressedResponse) throws IdentityException {
+
+        return SAMLSSOUtil.encode(SAMLSSOUtil.decode(compressedResponse));
     }
 
     /**

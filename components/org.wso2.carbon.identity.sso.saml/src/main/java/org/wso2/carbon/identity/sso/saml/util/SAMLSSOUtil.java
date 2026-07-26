@@ -2791,6 +2791,19 @@ public class SAMLSSOUtil {
     }
 
     /**
+     * Check whether sending SAML authentication failure response back to the SP's ACS URL is enabled.
+     * When enabled, authentication failures will result in a SAML error response being POSTed to the SP's
+     * Assertion Consumer URL instead of redirecting to the IdP's generic error page.
+     *
+     * @return true if enabled, false by default.
+     */
+    public static boolean isSendAuthFailureResponseToSPEnabled() {
+
+        return Boolean.parseBoolean(IdentityUtil.getProperty(
+                SAMLSSOConstants.SEND_SAML_AUTH_FAILURE_RESPONSE_TO_SP));
+    }
+
+    /**
      * Validate that the given attribute name format is a valid value.
      *
      * @param attributeNameFormat - Attribute name format value that requires validation.

@@ -10,6 +10,7 @@ import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.sso.saml.dto.SAMLSSOAuthnReqDTO;
 import org.wso2.carbon.identity.sso.saml.dto.SAMLSSOSessionDTO;
 import org.wso2.carbon.identity.sso.saml.SAMLSSOConstants;
+import org.wso2.carbon.identity.sso.saml.TestConstants;
 import org.wso2.carbon.identity.sso.saml.util.SAMLSSOUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
 
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.fail;
 
 public class SAMLSSOProviderServletTest {
@@ -130,5 +132,19 @@ public class SAMLSSOProviderServletTest {
         } catch (java.io.UnsupportedEncodingException e) {
             throw new IllegalStateException("UTF-8 should always be supported", e);
         }
+    }
+
+    @Test
+    public void testPrepareErrorResponseForPostBinding() throws Exception {
+
+        String compressedResponse = SAMLSSOUtil.compressResponse(TestConstants.AUTHN_FAILED_SAML_RESPONSE);
+        Method method = SAMLSSOProviderServlet.class.getDeclaredMethod("prepareErrorResponseForPostBinding",
+                String.class);
+        method.setAccessible(true);
+        String result = (String) method.invoke(samlssoProviderServlet, compressedResponse);
+        assertNotNull(result, "Prepared response should not be null.");
+        String decodedResult = new String(java.util.Base64.getDecoder().decode(result));
+        assertEquals(decodedResult, TestConstants.AUTHN_FAILED_SAML_RESPONSE,
+                "Decoded response should match the original SAML response.");
     }
 }
