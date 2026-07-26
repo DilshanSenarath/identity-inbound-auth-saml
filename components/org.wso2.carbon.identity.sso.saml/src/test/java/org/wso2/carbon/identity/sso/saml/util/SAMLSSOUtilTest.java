@@ -701,4 +701,24 @@ public class SAMLSSOUtilTest {
 
         assertEquals(SAMLSSOUtil.getIssuerWithoutQualifier(issuerWithQualifier), expected);
     }
+
+    @DataProvider(name = "sendAuthFailureResponseConfigData")
+    public Object[][] sendAuthFailureResponseConfigData() {
+
+        return new Object[][]{
+                {"true", true},
+                {"false", false},
+                {null, false},
+        };
+    }
+
+    @Test(dataProvider = "sendAuthFailureResponseConfigData")
+    public void testIsSendAuthFailureResponseToSPEnabled(String configValue, boolean expected) {
+
+        try (MockedStatic<IdentityUtil> identityUtil = Mockito.mockStatic(IdentityUtil.class)) {
+            identityUtil.when(() -> IdentityUtil.getProperty(
+                    SAMLSSOConstants.SEND_SAML_AUTH_FAILURE_RESPONSE_TO_SP)).thenReturn(configValue);
+            assertEquals(SAMLSSOUtil.isSendAuthFailureResponseToSPEnabled(), expected);
+        }
+    }
 }
